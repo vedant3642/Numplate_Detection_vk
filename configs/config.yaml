@@ -1,0 +1,116 @@
+# =============================================================================
+# NumPlate Detection Pipeline — Master Configuration
+# =============================================================================
+
+ 
+# Input Source
+ 
+source:
+  path: "data/raw/sample.mp4"   # Video file path, RTSP URL, or 0 for webcam
+  skip_frames: 2                 # Process every Nth frame (1 = no skip)
+
+ 
+# Vehicle Detection (YOLOv8 — COCO pre-trained)
+ 
+vehicle_detector:
+  weights: "yolov8n.pt"          # Auto-downloads from Ultralytics if not found
+  confidence: 0.45
+  iou_threshold: 0.50
+  device: "auto"                 # "cpu", "cuda", "mps", or "auto"
+  # COCO class IDs to keep: car=2, motorcycle=3, bus=5, truck=7
+  target_classes: [2, 3, 5, 7]
+  imgsz: 640
+
+ 
+# Plate Detection (fine-tuned YOLOv8 — run scripts/train_plate_detector.py)
+ 
+plate_detector:
+  weights: "models/weights/plate_detector-3/weights/plate_detector_best.pt"
+  fallback_weights: "yolov8n.pt" # Used if fine-tuned weights not found
+  confidence: 0.30
+  iou_threshold: 0.45
+  device: "auto"
+  imgsz: 320                     # Smaller input since vehicle crops are small
+
+ 
+# OCR Engine
+ 
+ocr:
+  backend: "paddleocr"              # "easyocr" | "paddleocr"
+  languages: ["en"]
+  gpu: false                     # No CUDA available — use CPU
+  min_confidence: 0.45           # Drop OCR reads below this threshold
+  # EasyOCR specific
+  easyocr:
+    allowlist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    paragraph: false
+    detail: 1
+  # PaddleOCR specific (disabled — PaddlePaddle v3 PIR incompatibility on this machine)
+  paddleocr:
+    use_angle_cls: false
+    lang: "en"
+    show_log: false
+
+ 
+# Preprocessing (CLAHE + plate trimming)
+ 
+preprocessing:
+  clahe:
+    enabled: true
+    clip_limit: 3.0
+    tile_grid_size: [8, 8]
+  plate_crop_ratio: 0.85         # Keep rightmost 85% to remove IND emblem
+  min_plate_height: 64           # Upscale plates smaller than this (pixels)
+  min_plate_width: 100
+
+ 
+# Post-processing / Deduplication
+ 
+postprocessing:
+  # Indian plate regex — adjust for your country
+  # MH12AB1234 or MH12A1234 (old series)
+  regex_pattern: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{1,4}$"
+  dedup_strategy: "best_confidence"  # faster: takes best single read
+  min_reads_before_flush: 1          # Commit after just 1 valid read
+
+ 
+# Tracker (DeepSORT)
+ 
+tracker:
+  backend: "deepsort"            # Only "deepsort" supported currently
+  max_age: 50                    # Frames to keep a track alive without match (increased)
+  n_init: 1                      # Detections needed to confirm a track (fast!)
+  max_cosine_distance: 0.4
+  nn_budget: 100
+
+ 
+# Storage
+ 
+storage:
+  db_uri: "sqlite:///detections.db"   # SQLite default; use postgresql:// for Postgres
+  auto_create_tables: true
+  csv_export_path: "output/detections.csv"
+
+ 
+# Visualisation
+ 
+visualizer:
+  enabled: true
+  show_window: true
+  window_name: "NumPlate Detection"
+  vehicle_box_color: [0, 255, 128]    # BGR — bright green
+  plate_box_color: [0, 165, 255]      # BGR — orange
+  text_color: [255, 255, 255]
+  font_scale: 0.65
+  line_thickness: 4
+  save_output_video: false
+  output_video_path: "output/result.mp4"
+
+ 
+# Logging
+ 
+logging:
+  level: "INFO"                  # DEBUG | INFO | WARNING | ERROR
+  log_file: "logs/pipeline.log"
+  max_bytes: 10485760            # 10 MB
+  backup_count: 3

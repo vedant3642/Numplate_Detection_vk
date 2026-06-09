@@ -1,0 +1,55 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Packaging / build artifacts
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Logs and temporary files
+logs/
+*.log
+*.tmp
+*.temp
+
+# Local environment files
+.env
+.env.*
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Model / training outputs
+models/weights/
+runs/
+*.pt
+*.onnx
+*.engine
+
+# Local media input/output
+data/raw/
+data/plates_dataset/
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# CSV exports if you do not want them in Git
+*.csv
